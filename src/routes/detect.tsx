@@ -26,6 +26,7 @@ import { pageHead } from "@/lib/metadata";
 import {
   analyzeImage,
   validateImage,
+  isLowConfidence,
   type Prediction,
   type DemoScenario,
 } from "@/services/diseaseDetection";
@@ -47,6 +48,9 @@ function Detect() {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const uploadVersion = useRef(0);
+  const resultPanel = useRef<HTMLElement>(null);
   const [scenario, setScenario] = useState<DemoScenario>("early-blight");
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [saved, setSaved] = useState<boolean | null>(null);
@@ -59,16 +63,18 @@ function Detect() {
   }, []);
   async function receive(file?: File) {
     if (!file || busy) return;
+    const version = ++uploadVersion.current;
     setError("");
     if (!validateImage(file)) {
       setError("invalidFile");
       return;
     }
+    setPreparing(true);
     try {
       const source = URL.createObjectURL(file);
       try {
         const thumbnail = await createThumbnail(source);
-        if (!alive.current) return;
+        if (!alive.current || version !== uploadVersion.current) return;
         setPhoto(thumbnail);
         setFileName(file.name);
         setPrediction(null);
@@ -77,11 +83,15 @@ function Detect() {
         URL.revokeObjectURL(source);
       }
     } catch {
-      setError("badImage");
+      if (alive.current && version === uploadVersion.current) setError("badImage");
+    } finally {
+      if (alive.current && version === uploadVersion.current) setPreparing(false);
     }
     if (input.current) input.current.value = "";
   }
   function remove() {
+    ++uploadVersion.current;
+    setPreparing(false);
     setPhoto(null);
     setPrediction(null);
     setSaved(null);
@@ -89,10 +99,17 @@ function Detect() {
     if (input.current) input.current.value = "";
   }
   async function analyze() {
-    if (!photo || busy) return;
+    if (!photo || busy || preparing) return;
     setBusy(true);
     setPrediction(null);
     setError("");
+    if (window.matchMedia("(max-width: 760px)").matches)
+      resultPanel.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "start",
+      });
     try {
       const result = await analyzeImage(scenario);
       if (!alive.current) return;
@@ -131,7 +148,7 @@ function Detect() {
             className="hidden"
             aria-label={t("choose")}
             onChange={(e) => receive(e.target.files?.[0])}
-            disabled={busy}
+            disabled={busy || preparing}
           />
           {photo ? (
             <>
@@ -144,18 +161,27 @@ function Detect() {
               />
               <div className="file-row">
                 <Leaf size={15} />
-                <span>{fileName}</span>
+                <span>{photo === sample ? t("sample") : fileName}</span>
                 <Button
                   variant="ghost"
                   size="icon"
                   aria-label={t("change")}
                   title={t("change")}
                   onClick={remove}
-                  disabled={busy}
+                  disabled={busy || preparing}
                 >
                   <X />
                 </Button>
               </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => input.current?.click()}
+                disabled={busy || preparing}
+              >
+                <ImagePlus />
+                {t("replaceImage")}
+              </Button>
             </>
           ) : (
             <>
@@ -197,18 +223,25 @@ function Detect() {
                 variant="link"
                 className="w-full mt-3 text-xs"
                 onClick={() => {
+                  ++uploadVersion.current;
                   setPhoto(sample);
                   setFileName(t("sample"));
                   setError("");
                   setPrediction(null);
                   setSaved(null);
                 }}
-                disabled={busy}
+                disabled={busy || preparing}
               >
                 <Leaf />
                 {t("trySample")}
               </Button>
             </>
+          )}
+          {preparing && (
+            <p role="status" className="upload-status">
+              <LoaderCircle size={15} className="animate-spin" />
+              {t("preparing")}
+            </p>
           )}
           {error && (
             <p role="alert" className="error-message">
@@ -225,7 +258,7 @@ function Detect() {
               setPrediction(null);
               setSaved(null);
             }}
-            disabled={busy}
+            disabled={busy || preparing}
           >
             <SelectTrigger id="scenario" className="w-full">
               <SelectValue />
@@ -238,14 +271,19 @@ function Detect() {
           <Button
             size="lg"
             className="analyze-button h-12"
-            disabled={!photo || busy}
+            disabled={!photo || busy || preparing}
             onClick={analyze}
           >
             {busy ? <LoaderCircle className="animate-spin" /> : <ScanLine />}
             {t(busy ? "analyzing" : "analyze")}
           </Button>
         </section>
-        <section className="tool-panel" aria-live="polite" aria-busy={busy}>
+        <section
+          ref={resultPanel}
+          className="tool-panel result-panel"
+          aria-live="polite"
+          aria-busy={busy}
+        >
           <div className="panel-title">
             <h2>{t("result")}</h2>
             <FlaskConical size={19} className="text-muted-foreground" />
@@ -256,7 +294,13 @@ function Detect() {
               <p className="text-xs text-muted-foreground mt-6">
                 {t(saved ? "saved" : "notSaved")}
               </p>
-              <div className="flex gap-2 flex-wrap mt-5">
+              {isLowConfidence(prediction) && (
+                <Button className="retry-button" onClick={() => input.current?.click()}>
+                  <Upload />
+                  {t("retryImage")}
+                </Button>
+              )}
+              <div className="result-actions">
                 <Button variant="outline" onClick={remove}>
                   <ImagePlus />
                   {t("newScan")}
@@ -279,7 +323,7 @@ function Detect() {
                 )}
               </div>
               <h3>{t(busy ? "analyzing" : "awaiting")}</h3>
-              <p>{t("awaitingDesc")}</p>
+              <p>{t(busy ? "analyzingDesc" : "awaitingDesc")}</p>
             </div>
           )}
         </section>

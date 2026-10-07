@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { History, Trash2, ArrowRight, FlaskConical, Eye } from "lucide-react";
+import { History, Trash2, ArrowRight, FlaskConical, Eye, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,20 +37,16 @@ export const Route = createFileRoute("/history")({
 function HistoryPage() {
   const { t, language } = useLanguage();
   const [scans, setScans] = useState<Scan[]>([]);
-  const [ready, setReady] = useState(false);
   const [selected, setSelected] = useState<Scan | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
     setScans(readHistory());
-    setReady(true);
   }, []);
   return (
     <main className="container page-main">
       <PageHeading title="history" description="historyDesc" />
       <DemoNotice />
-      {!ready ? (
-        <p>{t("loading")}</p>
-      ) : scans.length ? (
+      {scans.length ? (
         <>
           <div className="history-toolbar">
             <p className="text-sm text-muted-foreground">
@@ -132,11 +128,14 @@ function HistoryPage() {
       ) : (
         <div className="empty-history">
           <History className="mx-auto text-primary" size={38} />
-          <h2>{t("empty")}</h2>
+          <h2 aria-label={t("empty")} className="flex items-center justify-center gap-2">
+            {t("empty").replace("🌱", "").trim()}
+            <Sprout size={22} className="text-primary" aria-hidden="true" />
+          </h2>
           <p className="text-muted-foreground mb-6">{t("emptyDesc")}</p>
           <Button asChild>
             <Link to="/detect">
-              {t("start")}
+              {t("firstScan")}
               <ArrowRight />
             </Link>
           </Button>
