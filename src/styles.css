@@ -45,6 +45,7 @@
   --destructive: oklch(.55 .18 27);
   --hero-foreground: oklch(1 0 0);
   --hero-muted: oklch(.9 .018 142);
+  --hero-highlight: oklch(.85 .15 134);
   --hero-shade: oklch(.18 .045 155);
   --hero-gradient: linear-gradient(90deg, color-mix(in oklab, var(--hero-shade) 94%, transparent) 0%, color-mix(in oklab, var(--hero-shade) 80%, transparent) 35%, color-mix(in oklab, var(--hero-shade) 12%, transparent) 78%);
   --warning: oklch(.97 .04 88);
@@ -77,11 +78,11 @@
 .hero-copy { max-width:655px; color:var(--hero-foreground); }
 .hero-kicker { display:inline-flex; align-items:center; gap:8px; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:8px 12px; border:1px solid color-mix(in oklab,var(--hero-foreground) 25%,transparent); background:color-mix(in oklab,var(--hero-foreground) 8%,transparent); border-radius:4px; }
 .hero h1 { font-size:60px; font-weight:750; line-height:1.16; margin-top:24px; max-width:650px; }
-.hero h1 em { font-style:normal; color:oklch(.85 .15 134); }
+.hero h1 em { font-style:normal; color:var(--hero-highlight); }
 .hero-description { color:var(--hero-muted); font-size:16px; line-height:1.85; max-width:480px; margin-top:22px; }
 .hero-cta { margin-top:30px; display:flex; gap:12px; flex-wrap:wrap; }
 .hero-footnote { display:flex; align-items:center; gap:7px; color:var(--hero-muted); font-size:11px; margin-top:23px; }
-.section { padding-block: sixty; padding-block:58px; }
+.section { padding-block:58px; }
 .section-heading { text-align:center; margin-bottom:32px; }
 .eyebrow { color:var(--primary); text-transform:uppercase; letter-spacing:1.8px; font-size:10px; font-weight:800; display:inline-flex; align-items:center; gap:7px; }
 .section-heading h2 { font-size:30px; font-weight:750; margin-top:9px; }
