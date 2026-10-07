@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { History, Trash2, ArrowRight, FlaskConical, Eye } from "lucide-react";
+import { History, Trash2, ArrowRight, FlaskConical, Eye, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -128,7 +128,10 @@ function HistoryPage() {
       ) : (
         <div className="empty-history">
           <History className="mx-auto text-primary" size={38} />
-          <h2>{t("empty")}</h2>
+          <h2 aria-label={t("empty")} className="flex items-center justify-center gap-2">
+            {t("empty").replace("🌱", "").trim()}
+            <Sprout size={22} className="text-primary" aria-hidden="true" />
+          </h2>
           <p className="text-muted-foreground mb-6">{t("emptyDesc")}</p>
           <Button asChild>
             <Link to="/detect">

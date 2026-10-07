@@ -4,6 +4,6 @@
 - [x] Add mock analysis, local demo history, and low-confidence guidance.
 - [x] Test prediction rules and verify the complete scan flow.
 ## Scan experience refinements
-- [ ] Polish upload, preview, loading, results, and low-confidence retry.
-- [ ] Improve empty history and translate all added interface text.
-- [ ] Verify scan history, all languages, and mobile layouts.
+- [x] Polish upload, preview, loading, results, and low-confidence retry.
+- [x] Improve empty history and translate all added interface text.
+- [x] Verify scan history, all languages, and mobile layouts.
