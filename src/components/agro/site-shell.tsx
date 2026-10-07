@@ -44,7 +44,7 @@ export function Header() {
         <div className="header-actions">
           <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
             <SelectTrigger
-              aria-label="Language"
+              aria-label={t("languageLabel")}
               className="language-trigger w-[119px] h-9 text-xs border-border"
             >
               <Languages size={15} />

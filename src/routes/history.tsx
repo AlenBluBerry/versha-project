@@ -37,20 +37,16 @@ export const Route = createFileRoute("/history")({
 function HistoryPage() {
   const { t, language } = useLanguage();
   const [scans, setScans] = useState<Scan[]>([]);
-  const [ready, setReady] = useState(false);
   const [selected, setSelected] = useState<Scan | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
     setScans(readHistory());
-    setReady(true);
   }, []);
   return (
     <main className="container page-main">
       <PageHeading title="history" description="historyDesc" />
       <DemoNotice />
-      {!ready ? (
-        <p>{t("loading")}</p>
-      ) : scans.length ? (
+      {scans.length ? (
         <>
           <div className="history-toolbar">
             <p className="text-sm text-muted-foreground">
@@ -136,7 +132,7 @@ function HistoryPage() {
           <p className="text-muted-foreground mb-6">{t("emptyDesc")}</p>
           <Button asChild>
             <Link to="/detect">
-              {t("start")}
+              {t("firstScan")}
               <ArrowRight />
             </Link>
           </Button>
