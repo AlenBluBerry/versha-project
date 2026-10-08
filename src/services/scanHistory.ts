@@ -1,4 +1,5 @@
 import type { Prediction } from "./diseaseDetection";
+
 export type Scan = {
   id: string;
   createdAt: string;
@@ -6,7 +7,22 @@ export type Scan = {
   fileName: string;
   prediction: Prediction;
 };
+
 const KEY = "agrovision-demo-scans";
+
+function isValidPrediction(value: unknown): value is Prediction {
+  if (!value || typeof value !== "object") return false;
+  const p = value as Record<string, unknown>;
+  return (
+    typeof p.crop === "string" &&
+    typeof p.disease === "string" &&
+    typeof p.confidence === "number" &&
+    Array.isArray(p.symptoms) &&
+    Array.isArray(p.prevention) &&
+    p.isMock === false
+  );
+}
+
 export function readHistory(): Scan[] {
   try {
     const data: unknown = JSON.parse(localStorage.getItem(KEY) || "[]");
@@ -19,14 +35,13 @@ export function readHistory(): Scan[] {
         typeof item.createdAt === "string" &&
         typeof item.image === "string" &&
         typeof item.fileName === "string" &&
-        item.prediction?.isMock === true &&
-        typeof item.prediction.confidence === "number" &&
-        ["early-blight", "inconclusive"].includes(item.prediction.disease),
+        isValidPrediction(item.prediction),
     );
   } catch {
     return [];
   }
 }
+
 export function saveScan(scan: Scan) {
   try {
     localStorage.setItem(KEY, JSON.stringify([scan, ...readHistory()]));
@@ -35,6 +50,7 @@ export function saveScan(scan: Scan) {
     return false;
   }
 }
+
 export function clearHistory() {
   try {
     localStorage.removeItem(KEY);
@@ -43,6 +59,7 @@ export function clearHistory() {
     return false;
   }
 }
+
 export function createThumbnail(source: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const image = new Image();
