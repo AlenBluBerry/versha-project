@@ -12,13 +12,6 @@ import {
   History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { PageHeading, DemoNotice } from "@/components/agro/site-shell";
 import { Result } from "@/components/agro/result";
 import { useLanguage } from "@/lib/i18n";
@@ -28,22 +21,24 @@ import {
   validateImage,
   isLowConfidence,
   type Prediction,
-  type DemoScenario,
 } from "@/services/diseaseDetection";
 import { createThumbnail, saveScan } from "@/services/scanHistory";
 import sample from "@/assets/tomato-leaf.jpg";
+
 export const Route = createFileRoute("/detect")({
   head: () =>
     pageHead(
       "Detect Disease",
-      "Upload a crop leaf image and explore a simulated disease report. Demo only: no real AI analysis.",
+      "Upload a crop leaf image and get an AI-based disease screening result.",
     ),
   component: Detect,
 });
+
 function Detect() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const input = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState("");
@@ -51,16 +46,17 @@ function Detect() {
   const [preparing, setPreparing] = useState(false);
   const uploadVersion = useRef(0);
   const resultPanel = useRef<HTMLElement>(null);
-  const [scenario, setScenario] = useState<DemoScenario>("early-blight");
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [saved, setSaved] = useState<boolean | null>(null);
   const alive = useRef(true);
+
   useEffect(() => {
     alive.current = true;
     return () => {
       alive.current = false;
     };
   }, []);
+
   async function receive(file?: File) {
     if (!file || busy) return;
     const version = ++uploadVersion.current;
@@ -76,6 +72,7 @@ function Detect() {
         const thumbnail = await createThumbnail(source);
         if (!alive.current || version !== uploadVersion.current) return;
         setPhoto(thumbnail);
+        setFile(file);
         setFileName(file.name);
         setPrediction(null);
         setSaved(null);
@@ -89,17 +86,20 @@ function Detect() {
     }
     if (input.current) input.current.value = "";
   }
+
   function remove() {
     ++uploadVersion.current;
     setPreparing(false);
     setPhoto(null);
+    setFile(null);
     setPrediction(null);
     setSaved(null);
     setError("");
     if (input.current) input.current.value = "";
   }
+
   async function analyze() {
-    if (!photo || busy || preparing) return;
+    if (!photo || !file || busy || preparing) return;
     setBusy(true);
     setPrediction(null);
     setError("");
@@ -111,7 +111,7 @@ function Detect() {
         block: "start",
       });
     try {
-      const result = await analyzeImage(scenario);
+      const result = await analyzeImage(file, language);
       if (!alive.current) return;
       const image = await createThumbnail(photo);
       if (!alive.current) return;
@@ -125,12 +125,14 @@ function Detect() {
           prediction: result,
         }),
       );
-    } catch {
-      if (alive.current) setError("fileError");
+    } catch (e) {
+      if (alive.current)
+        setError(e instanceof Error && e.message ? e.message : "fileError");
     } finally {
       if (alive.current) setBusy(false);
     }
   }
+
   return (
     <main className="container page-main">
       <PageHeading title="detect" description="detectDesc" />
@@ -225,6 +227,7 @@ function Detect() {
                 onClick={() => {
                   ++uploadVersion.current;
                   setPhoto(sample);
+                  setFile(null);
                   setFileName(t("sample"));
                   setError("");
                   setPrediction(null);
@@ -245,38 +248,23 @@ function Detect() {
           )}
           {error && (
             <p role="alert" className="error-message">
-              {t(error as "invalidFile")}
+              {error === "invalidFile" || error === "badImage" || error === "fileError"
+                ? t(error)
+                : error}
             </p>
           )}
-          <label className="form-label" htmlFor="scenario">
-            {t("scenario")}
-          </label>
-          <Select
-            value={scenario}
-            onValueChange={(v) => {
-              setScenario(v as DemoScenario);
-              setPrediction(null);
-              setSaved(null);
-            }}
-            disabled={busy || preparing}
-          >
-            <SelectTrigger id="scenario" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="early-blight">{t("regular")}</SelectItem>
-              <SelectItem value="low-confidence">{t("low")}</SelectItem>
-            </SelectContent>
-          </Select>
           <Button
             size="lg"
             className="analyze-button h-12"
-            disabled={!photo || busy || preparing}
+            disabled={!photo || !file || busy || preparing}
             onClick={analyze}
           >
             {busy ? <LoaderCircle className="animate-spin" /> : <ScanLine />}
             {t(busy ? "analyzing" : "analyze")}
           </Button>
+          {photo === sample && !file && (
+            <p className="text-xs text-muted-foreground mt-2">{t("sampleNote")}</p>
+          )}
         </section>
         <section
           ref={resultPanel}
