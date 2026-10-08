@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { History, Trash2, ArrowRight, FlaskConical, Eye, Sprout } from "lucide-react";
+import { History, Trash2, ArrowRight, ScanLine, Eye, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,22 +26,26 @@ import { useLanguage } from "@/lib/i18n";
 import { pageHead } from "@/lib/metadata";
 import { readHistory, clearHistory, type Scan } from "@/services/scanHistory";
 import { isLowConfidence } from "@/services/diseaseDetection";
+
 export const Route = createFileRoute("/history")({
   head: () =>
     pageHead(
       "Scan History",
-      "Review your simulated crop disease scans saved privately in this browser on this device.",
+      "Review your AI-based crop disease scans saved privately in this browser on this device.",
     ),
   component: HistoryPage,
 });
+
 function HistoryPage() {
   const { t, language } = useLanguage();
   const [scans, setScans] = useState<Scan[]>([]);
   const [selected, setSelected] = useState<Scan | null>(null);
   const [error, setError] = useState(false);
+
   useEffect(() => {
     setScans(readHistory());
   }, []);
+
   return (
     <main className="container page-main">
       <PageHeading title="history" description="historyDesc" />
@@ -98,11 +102,11 @@ function HistoryPage() {
                 />
                 <div className="history-body">
                   <span className="eyebrow">
-                    <FlaskConical size={12} />
-                    {t("simulated")}
+                    <ScanLine size={12} />
+                    {t("aiAnalyzed")}
                   </span>
-                  <p className="text-xs text-muted-foreground mt-4">{t("tomato")}</p>
-                  <h2>{t(isLowConfidence(scan.prediction) ? "uncertain" : "disease")}</h2>
+                  <p className="text-xs text-muted-foreground mt-4">{scan.prediction.crop}</p>
+                  <h2>{scan.prediction.disease}</h2>
                   <div className="history-meta">
                     <span>
                       {new Date(scan.createdAt).toLocaleString(
@@ -150,7 +154,7 @@ function HistoryPage() {
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("details")}</DialogTitle>
-            <DialogDescription>{t("demoOnly")}</DialogDescription>
+            <DialogDescription>{t("aiDisclaimer")}</DialogDescription>
           </DialogHeader>
           {selected && (
             <>
