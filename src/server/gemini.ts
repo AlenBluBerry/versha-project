@@ -233,8 +233,12 @@ export async function validateAndReadImage(file: File): Promise<{
       400,
     );
   }
-  const buffer = await file.arrayBuffer();
-  return { base64: Buffer.from(buffer).toString("base64"), mimeType: mime };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+let binary = "";
+for (let i = 0; i < bytes.length; i += 0x8000) {
+  binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+}
+return { base64: btoa(binary), mimeType: mime };
 }
 
 export async function callGemini(
