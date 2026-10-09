@@ -1,15 +1,13 @@
-// Client-facing disease detection service.
-// analyzeImage is a TanStack Start SERVER FUNCTION: it executes only on the
-// server, so GEMINI_API_KEY never reaches the browser.
 import { createServerFn } from "@tanstack/react-start";
+import { validateAndReadImage, callGemini, resolveLanguage, AnalysisError } from "../server/gemini";
 
-export const LOW_CONFIDENCE_THRESHOLD = 60; // percent, matches existing UI behavior
+export const LOW_CONFIDENCE_THRESHOLD = 60;
 
 export type Prediction = {
   isPlant: boolean;
   crop: string;
   disease: string;
-  confidence: number; // 0–100 (integer), conservative
+  confidence: number;
   severity: string;
   healthStatus: string;
   symptoms: string[];
@@ -36,20 +34,12 @@ export function validateImage(file: Pick<File, "type" | "size">) {
   );
 }
 
-type ServerErrorShape = { code?: string; message?: string };
-
-// --- Server function (runs only on the server) -----------------------------
-
 const analyzeServer = createServerFn({ method: "POST" })
   .inputValidator((data: { image: File; language: string }) => data)
   .handler(async ({ data }): Promise<Prediction> => {
-    const [{ validateAndReadImage, callGemini, resolveLanguage, AnalysisError }] =
-      await Promise.all([import("@/server/gemini")]);
     try {
       const { base64, mimeType } = await validateAndReadImage(data.image);
-      const language = resolveLanguage(data.language);
-      const result = await callGemini(base64, mimeType, language);
-
+      const result = await callGemini(base64, mimeType, resolveLanguage(data.language));
       const toPercent = (c: number) => Math.round(Math.min(0.9, Math.max(0, c)) * 100);
 
       if (!result.isPlant || !result.imageQuality.usable) {
@@ -94,32 +84,21 @@ const analyzeServer = createServerFn({ method: "POST" })
       };
     } catch (error) {
       if (error instanceof AnalysisError) {
-        throw new Error(JSON.stringify({ code: error.code, message: error.message }));
+        // Throw a plain object — TanStack Start serializes this to the client
+        throw { code: error.code, message: error.message };
       }
-      throw new Error(
-        JSON.stringify({
-          code: "SERVER_ERROR",
-          message: "Something went wrong while analyzing the image. Please try again.",
-        }),
-      );
+      console.error("analyze error:", error);
+      throw { code: "SERVER_ERROR", message: "Something went wrong while analyzing the image. Please try again." };
     }
   });
-
-// --- Client-facing wrapper --------------------------------------------------
 
 export async function analyzeImage(file: File, language: string): Promise<Prediction> {
   try {
     return await analyzeServer({ data: { image: file, language } });
   } catch (error) {
-    // Surface clean, server-shaped errors to the UI.
-    const raw = error instanceof Error ? error.message : "";
-    try {
-      const parsed = JSON.parse(raw) as ServerErrorShape;
-      if (parsed && typeof parsed.message === "string") {
-        throw new Error(parsed.message);
-      }
-    } catch {
-      // not JSON — fall through
+    // The server threw a plain { code, message } object
+    if (error && typeof error === "object" && "message" in error) {
+      throw new Error(String((error as { message: unknown }).message));
     }
     throw new Error("Could not analyze this photo. Please try again.");
   }
